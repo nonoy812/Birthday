@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Happy Birthday Dane</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    .wrap{position:relative;height:100vh;overflow:hidden;background:linear-gradient(180deg,#02210a 0%, #073a1b 60%, #0d5330 100%);color:#e8f5e9;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+    canvas{position:absolute;inset:0;z-index:0}
+    .ui{position:relative;z-index:2;text-align:center;max-width:900px}
+    h1{font-size:clamp(28px,6vw,64px);margin:0 0 8px;text-shadow:0 6px 24px rgba(0,0,0,0.6);color:#a8ffb3}
+    p.lead{margin:0 0 18px;font-size:clamp(14px,2.5vw,20px);opacity:.9;color:#c8f7d6}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <canvas id="c"></canvas>
+    <div class="ui">
+      <h1>Happy Birthday Dane!</h1>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let W = canvas.width = innerWidth;
+    let H = canvas.height = innerHeight;
+    const rand = (a,b)=>Math.random()*(b-a)+a;
+    const TAU = Math.PI*2;
+
+    window.addEventListener('resize', ()=>{
+      W = canvas.width = innerWidth;
+      H = canvas.height = innerHeight;
+    });
+
+    class Particle {
+      constructor(x,y, vx,vy, color, life, size){
+        this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.color=color;this.life=life;this.maxLife=life;this.size=size;
+      }
+      update(dt){
+        this.life -= dt;
+        this.vy += 0.03;
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+      draw(ctx){
+        const t = Math.max(0, this.life/this.maxLife);
+        ctx.globalAlpha = Math.pow(t,0.8);
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.arc(this.x,this.y,this.size,0,TAU);
+        ctx.fill();
+      }
+    }
+
+    let particles = [];
+
+    function createFirework(x,y){
+      const hue = Math.floor(rand(90,150)); // green range
+      const count = Math.floor(rand(20,60));
+      for(let i=0;i<count;i++){
+        const angle = rand(0,TAU);
+        const speed = Math.pow(Math.random(),0.7) * rand(2.6,7);
+        const vx = Math.cos(angle)*speed;
+        const vy = Math.sin(angle)*speed;
+        const color = `hsl(${hue + rand(-15,15)}deg ${Math.floor(rand(50,80))}% ${Math.floor(rand(40,70))}%)`;
+        particles.push(new Particle(x,y,vx,vy,color, rand(60,120), rand(1,3)));
+      }
+    }
+
+    function launchFirework(){
+      const startX = rand(0.15*W,0.85*W);
+      const startY = H + 10;
+      const targetX = rand(0.1*W,0.9*W);
+      const targetY = rand(0.15*H,0.55*H);
+      const riseTime = rand(500,1200);
+      const start = performance.now();
+      const rise = (t)=>{
+        const elapsed = t-start;
+        const progress = Math.min(1,elapsed/riseTime);
+        const x = startX + (targetX-startX)*progress;
+        const y = startY + (targetY-startY)*progress;
+        particles.push(new Particle(x,y, rand(-0.6,0.6), rand(-1.8,-0.6), 'rgba(220,255,220,0.9)', 12, 1.6));
+        if(progress<1) requestAnimationFrame(rise);
+        else createFirework(targetX,targetY);
+      }
+      requestAnimationFrame(rise);
+    }
+
+    let last = performance.now();
+    function loop(t){
+      const dt = Math.min(60,(t-last))/16.6667;
+      last = t;
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(2,33,10,0.35)';
+      ctx.fillRect(0,0,W,H);
+
+      ctx.globalCompositeOperation = 'lighter';
+      for(let i=particles.length-1;i>=0;i--){
+        const p = particles[i];
+        p.update(dt);
+        if(p.life<=0 || p.y>H+50 || p.x<-50 || p.x>W+50) particles.splice(i,1);
+        else p.draw(ctx);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    setInterval(()=>launchFirework(), 850);
+    for(let i=0;i<3;i++) setTimeout(()=>launchFirework(), 600 + i*400);
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
